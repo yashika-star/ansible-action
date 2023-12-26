@@ -1,0 +1,45 @@
+
+name: Install Nginx
+
+on:
+  # push:
+  #   branches:
+  #     - main
+   workflow_dispatch:
+    inputs:
+      Run it:
+        description: 'Run'
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    - name: Install Ansible
+      run: |
+        sudo apt update
+        pip install ansible
+      continue-on-error: true
+
+    - name: Set up SSH Key
+      run: |
+        mkdir -p /home/runner/.ssh/
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/runner/.ssh/id_rsa
+        chmod 400 /home/runner/.ssh/id_rsa
+      shell: bash
+
+    - name: Run Ansible playbook
+      run: |
+        ansible all -i inventory.ini -m ping --private-key=/home/runner/.ssh/id_rsa -u ubuntu
+        ansible-playbook -i inventory.ini --private-key=/home/runner/.ssh/id_rsa -u ubuntu -b nginxfile.yaml
+      env:
+        ANSIBLE_HOST_KEY_CHECKING: false
